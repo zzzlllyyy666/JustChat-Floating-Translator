@@ -1,6 +1,6 @@
 using System.IO;
 using System.Windows;
-using Brushes = System.Windows.Media.Brushes;
+using System.Windows.Media;
 using JustChat.Core;
 
 namespace JustChat.Windows;
@@ -15,6 +15,7 @@ public partial class PreferencesWindow : Window
         InitializeComponent();
         IndustryTextBox.Text = preferences.Industry;
         ToneTextBox.Text = preferences.Tone;
+        SourceInitialized += (_, _) => ThemeManager.ApplyToWindow(this);
     }
 
     public TranslationPreferences Preferences { get; private set; }
@@ -24,7 +25,7 @@ public partial class PreferencesWindow : Window
         IndustryTextBox.Clear();
         ToneTextBox.Clear();
         PreferencesStatusTextBlock.Text = "点击“设为默认”后清除保存的翻译偏好";
-        PreferencesStatusTextBlock.Foreground = Brushes.DimGray;
+        PreferencesStatusTextBlock.Foreground = (Brush)FindResource("SecondaryTextBrush");
     }
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -52,6 +53,6 @@ public partial class PreferencesWindow : Window
     private void SetError(string message)
     {
         PreferencesStatusTextBlock.Text = message;
-        PreferencesStatusTextBlock.Foreground = Brushes.Firebrick;
+        PreferencesStatusTextBlock.Foreground = (Brush)FindResource("ErrorBrush");
     }
 }

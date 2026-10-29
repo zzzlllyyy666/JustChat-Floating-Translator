@@ -7,8 +7,12 @@ namespace JustChat.Windows;
 
 internal sealed class GlobalHotKeyController : IDisposable
 {
+    public const string PrimaryShortcut = "Ctrl+Shift+Space";
+    public const string FallbackShortcut = "Ctrl+Alt+Space";
+
     private const int HotKeyId = 0x4A43;
     private const int WmHotKey = 0x0312;
+    private const uint ModAlt = 0x0001;
     private const uint ModControl = 0x0002;
     private const uint ModShift = 0x0004;
     private const uint ModNoRepeat = 0x4000;
@@ -20,9 +24,10 @@ internal sealed class GlobalHotKeyController : IDisposable
     private bool _isRegistered;
     private bool _isDisposed;
 
-    public GlobalHotKeyController(Window window, Action action)
+    public GlobalHotKeyController(Window window, Action action, bool useFallback = false)
     {
         _action = action;
+        ShortcutText = useFallback ? FallbackShortcut : PrimaryShortcut;
         _windowHandle = new WindowInteropHelper(window).Handle;
         _source = HwndSource.FromHwnd(_windowHandle)
             ?? throw new InvalidOperationException("无法取得窗口句柄，全局快捷键未注册");
@@ -30,11 +35,8 @@ internal sealed class GlobalHotKeyController : IDisposable
 
         try
         {
-            _isRegistered = RegisterHotKey(
-                _windowHandle,
-                HotKeyId,
-                ModControl | ModShift | ModNoRepeat,
-                VkSpace);
+            var modifiers = ModControl | ModNoRepeat | (useFallback ? ModAlt : ModShift);
+            _isRegistered = RegisterHotKey(_windowHandle, HotKeyId, modifiers, VkSpace);
             if (!_isRegistered)
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -46,6 +48,8 @@ internal sealed class GlobalHotKeyController : IDisposable
             throw;
         }
     }
+
+    public string ShortcutText { get; }
 
     private nint WindowProc(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
@@ -75,11 +79,11 @@ internal sealed class GlobalHotKeyController : IDisposable
         _isDisposed = true;
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool RegisterHotKey(nint hWnd, int id, uint fsModifiers, uint vk);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool UnregisterHotKey(nint hWnd, int id);
 }

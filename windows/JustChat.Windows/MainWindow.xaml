@@ -2,166 +2,375 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="JustChat"
-        Width="360"
-        Height="580"
-        MinWidth="340"
-        MinHeight="560"
+        Icon="Assets/JustChat.ico"
+        Width="400"
+        Height="640"
+        MinWidth="380"
+        MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Topmost="True"
-        Background="#F5F5F7"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}"
         FontFamily="Microsoft YaHei UI, Segoe UI">
-    <Grid Margin="18,16,18,14">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid x:Name="MainContent">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="JustChat"
-                       FontSize="24"
-                       FontWeight="SemiBold"
-                       Foreground="#1D1D1F" />
-            <TextBlock Text="写下中文，准备好再翻译"
-                       Margin="0,3,0,0"
-                       FontSize="12"
-                       Foreground="#6E6E73" />
-            <TextBlock Text="Ctrl+Shift+Space 呼出／收起 · 关闭后驻留托盘"
-                       Margin="0,5,0,0"
-                       FontSize="11"
-                       Foreground="#8E8E93" />
-        </StackPanel>
+            <Border Grid.Row="0"
+                    Padding="18,14"
+                    Background="{DynamicResource PanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="38" Height="38" CornerRadius="11"
+                            Background="{DynamicResource AccentBrush}">
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource AccentForegroundBrush}"
+                                   FontSize="17" FontWeight="Bold" Text="聊" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="JustChat" />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                   Margin="0,2,0,0" Text="先写中文，再自然表达" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="GuideButton"
+                                Style="{StaticResource CompactButtonStyle}"
+                                Margin="0,0,6,0"
+                                Padding="9,4"
+                                Content="指南"
+                                ToolTip="重新打开使用指南"
+                                Click="GuideButton_Click" />
+                        <Button x:Name="ApiSettingsButton"
+                                Style="{StaticResource CompactButtonStyle}"
+                                Padding="9,4"
+                                Content="API"
+                                ToolTip="填写或更换 DeepSeek API Key"
+                                Click="ApiSettingsButton_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
 
-        <StackPanel Grid.Row="1" Margin="0,0,0,12">
-            <TextBlock Text="DeepSeek API Key"
-                       Margin="0,0,0,5"
-                       FontSize="12"
-                       FontWeight="SemiBold"
-                       Foreground="#3A3A3C" />
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <PasswordBox x:Name="ApiKeyPasswordBox"
-                             Height="32"
-                             Padding="8,4"
-                             VerticalContentAlignment="Center"
-                             ToolTip="API Key 使用 Windows 当前用户加密保存" />
-                <Button x:Name="SaveKeyButton"
-                        Grid.Column="1"
-                        Width="74"
-                        Height="32"
-                        Margin="8,0,0,0"
-                        Content="保存 Key"
-                        Click="SaveKeyButton_Click" />
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="16,14">
+                    <Border x:Name="ApiCard"
+                            Margin="0,0,0,12"
+                            Padding="12"
+                            CornerRadius="12"
+                            Background="{DynamicResource PanelBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,9">
+                                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="DeepSeek API Key" />
+                                <TextBlock x:Name="ApiKeyStateTextBlock"
+                                           Style="{StaticResource SecondaryTextStyle}"
+                                           HorizontalAlignment="Right"
+                                           Text="未保存" />
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <PasswordBox x:Name="ApiKeyPasswordBox"
+                                             Height="36"
+                                             VerticalContentAlignment="Center"
+                                             ToolTip="使用 Windows 当前用户加密保存" />
+                                <Button x:Name="SaveKeyButton"
+                                        Grid.Column="1"
+                                        Margin="8,0,0,0"
+                                        Padding="12,6"
+                                        Content="保存"
+                                        Click="SaveKeyButton_Click" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                       Margin="0,8,0,0"
+                                       TextWrapping="Wrap"
+                                       Text="仅当前 Windows 用户可读取，不会包含在程序文件中。" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ComboBox x:Name="TargetLanguageSelector"
+                                  DisplayMemberPath="MenuLabel"
+                                  VerticalContentAlignment="Center" />
+                        <Button x:Name="PreferencesButton"
+                                Grid.Row="1"
+                                Margin="0,8,0,0"
+                                HorizontalContentAlignment="Left"
+                                Content="设置行业与语气 · 翻译会更像你"
+                                FontSize="11"
+                                FontWeight="Normal"
+                                ToolTip="设置默认行业与语气"
+                                Click="PreferencesButton_Click" />
+                    </Grid>
+
+                    <Grid Margin="0,0,0,6">
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="中文草稿" />
+                        <TextBlock x:Name="DraftCountTextBlock"
+                                   Style="{StaticResource SecondaryTextStyle}"
+                                   HorizontalAlignment="Right"
+                                   Text="0 字" />
+                    </Grid>
+                    <TextBox x:Name="DraftTextBox"
+                             Height="96"
+                             MaxLength="30000"
+                             AcceptsReturn="True"
+                             AcceptsTab="False"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             VerticalContentAlignment="Top"
+                             TextChanged="DraftTextBox_TextChanged" />
+
+                    <Grid Margin="0,12,0,6">
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="译文" />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                   HorizontalAlignment="Right"
+                                   Text="写回前可编辑" />
+                    </Grid>
+                    <TextBox x:Name="TranslationTextBox"
+                             Height="96"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             VerticalContentAlignment="Top"
+                             TextChanged="TranslationTextBox_TextChanged" />
+
+                    <Grid Margin="0,12,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="TranslateButton"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Height="42"
+                                Content="翻译  Ctrl+T"
+                                Click="TranslateButton_Click" />
+                        <Button x:Name="WriteBackButton"
+                                Grid.Column="1"
+                                Height="42"
+                                Margin="8,0,0,0"
+                                Content="写回  Ctrl+S"
+                                Click="WriteBackButton_Click"
+                                IsEnabled="False" />
+                    </Grid>
+
+                    <Border Padding="11,9"
+                            CornerRadius="10"
+                            Background="{DynamicResource PanelBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Ellipse x:Name="StatusIndicator"
+                                     Width="7" Height="7"
+                                     Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     Fill="{DynamicResource SecondaryTextBrush}" />
+                            <TextBlock x:Name="StatusTextBlock"
+                                       Grid.Column="1"
+                                       Style="{StaticResource SecondaryTextStyle}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Text="草稿仅在主动翻译时发送至 DeepSeek" />
+                            <Button x:Name="HotKeyRetryButton"
+                                    Grid.Column="2"
+                                    Style="{StaticResource QuietButtonStyle}"
+                                    Margin="6,-5,-6,-5"
+                                    Padding="6,4"
+                                    Visibility="Collapsed"
+                                    Content="恢复首选快捷键"
+                                    Click="HotKeyRetryButton_Click" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Row="2"
+                    Padding="12,8"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,1,0,0">
+                <TextBlock x:Name="HotKeyHintTextBlock"
+                           Style="{StaticResource SecondaryTextStyle}"
+                           HorizontalAlignment="Center"
+                           FontSize="10"
+                           Text="Ctrl+Shift+Space 呼出／收起 · 关闭后驻留托盘" />
+            </Border>
+        </Grid>
+
+        <Grid x:Name="OnboardingOverlay"
+              Visibility="Collapsed"
+              Background="{DynamicResource WindowBackgroundBrush}">
+            <Grid Margin="22,18">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,20">
+                    <StackPanel>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Text="初次设置" />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                   Margin="0,3,0,0"
+                                   Text="每一步都可以稍后配置" />
+                    </StackPanel>
+                    <TextBlock x:Name="OnboardingStepText"
+                               Style="{StaticResource SecondaryTextStyle}"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Text="1 / 3" />
+                </Grid>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <Grid>
+                        <StackPanel x:Name="OnboardingStepOne">
+                            <Border Width="42" Height="42" CornerRadius="12"
+                                    Margin="0,0,0,16"
+                                    HorizontalAlignment="Left"
+                                    Background="{DynamicResource SubtleAccentBrush}">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontSize="19" FontWeight="SemiBold" Text="Key" />
+                            </Border>
+                            <TextBlock FontSize="23" FontWeight="SemiBold" Text="连接 DeepSeek" />
+                            <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                       Margin="0,9,0,20"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Text="使用你自己的 API Key。正文只会在你主动翻译时发送给 DeepSeek。" />
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="API Key" />
+                            <PasswordBox x:Name="OnboardingApiKeyPasswordBox"
+                                         Margin="0,7,0,0"
+                                         Height="40"
+                                         VerticalContentAlignment="Center" />
+                            <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                       Margin="0,9,0,0"
+                                       TextWrapping="Wrap"
+                                       Text="“保存并连接”会发送一句“你好”验证网络与账户，可能产生极少量 API 费用。" />
+                            <TextBlock x:Name="OnboardingStatusTextBlock"
+                                       Style="{StaticResource SecondaryTextStyle}"
+                                       MinHeight="34"
+                                       Margin="0,12,0,0"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="OnboardingStepTwo" Visibility="Collapsed">
+                            <Border Width="42" Height="42" CornerRadius="12"
+                                    Margin="0,0,0,16"
+                                    HorizontalAlignment="Left"
+                                    Background="{DynamicResource SubtleAccentBrush}">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontSize="20" Text="↩" />
+                            </Border>
+                            <TextBlock FontSize="23" FontWeight="SemiBold" Text="写回无需额外授权" />
+                            <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                       Margin="0,9,0,18"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Text="JustChat 只在写回时模拟一次粘贴，不读取目标输入框的已有内容。" />
+                            <Border Padding="12" CornerRadius="10"
+                                    Background="{DynamicResource PanelBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="记住这三点" />
+                                    <TextBlock Margin="0,12,0,0" Text="1  先点击目标软件的输入框" />
+                                    <TextBlock Margin="0,8,0,0" Text="2  回到 JustChat 生成并检查译文" />
+                                    <TextBlock Margin="0,8,0,0" Text="3  按 Ctrl+S 写回并恢复原剪贴板" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock x:Name="OnboardingHotKeyTextBlock"
+                                       Style="{StaticResource SecondaryTextStyle}"
+                                       Margin="0,12,0,0"
+                                       TextWrapping="Wrap"
+                                       Text="使用 Ctrl+Shift+Space 随时呼出或收起面板。" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="OnboardingStepThree" Visibility="Collapsed">
+                            <Border Width="42" Height="42" CornerRadius="12"
+                                    Margin="0,0,0,16"
+                                    HorizontalAlignment="Left"
+                                    Background="{DynamicResource SubtleAccentBrush}">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontSize="20" Text="✓" />
+                            </Border>
+                            <TextBlock FontSize="23" FontWeight="SemiBold" Text="30 秒完成第一次翻译" />
+                            <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                       Margin="0,9,0,18"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Text="之后切换软件，写入目标会跟随你最近选择的输入框。" />
+                            <Border Padding="12" CornerRadius="10"
+                                    Background="{DynamicResource PanelBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="1  点击记事本或聊天软件的输入框" />
+                                    <TextBlock x:Name="OnboardingPracticeHotKeyTextBlock"
+                                               Margin="0,12,0,0"
+                                               Text="2  按 Ctrl+Shift+Space 呼出面板" />
+                                    <TextBlock Margin="0,12,0,0" Text="3  输入中文，按 Ctrl+T 生成译文" />
+                                    <TextBlock Margin="0,12,0,0" Text="4  检查译文，按 Ctrl+S 写回" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Style="{StaticResource SecondaryTextStyle}"
+                                       Margin="0,12,0,0"
+                                       TextWrapping="Wrap"
+                                       Text="写回前仍可修改译文；关闭窗口只会隐藏到托盘。" />
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+
+                <Grid Grid.Row="2" Margin="0,18,0,0">
+                    <Button x:Name="OnboardingBackButton"
+                            Style="{StaticResource QuietButtonStyle}"
+                            HorizontalAlignment="Left"
+                            Visibility="Collapsed"
+                            Content="上一步"
+                            Click="OnboardingBackButton_Click" />
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <Button x:Name="OnboardingSkipButton"
+                                Style="{StaticResource QuietButtonStyle}"
+                                Margin="0,0,6,0"
+                                Content="稍后再说"
+                                Click="OnboardingSkipButton_Click" />
+                        <Button x:Name="OnboardingConnectButton"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Content="保存并连接"
+                                Click="OnboardingConnectButton_Click" />
+                        <Button x:Name="OnboardingContinueButton"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Visibility="Collapsed"
+                                Content="继续"
+                                Click="OnboardingContinueButton_Click" />
+                        <Button x:Name="OnboardingFinishButton"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Visibility="Collapsed"
+                                Content="开始使用"
+                                Click="OnboardingFinishButton_Click" />
+                    </StackPanel>
+                </Grid>
             </Grid>
-        </StackPanel>
-
-        <StackPanel Grid.Row="2" Margin="0,0,0,12">
-            <TextBlock Text="目标语言"
-                       Margin="0,0,0,5"
-                       FontSize="12"
-                       FontWeight="SemiBold"
-                       Foreground="#3A3A3C" />
-            <ComboBox x:Name="TargetLanguageSelector"
-                      Height="32"
-                      Padding="8,3"
-                      DisplayMemberPath="MenuLabel"
-                      VerticalContentAlignment="Center" />
-            <Button x:Name="PreferencesButton"
-                    Height="32"
-                    Margin="0,8,0,0"
-                    Padding="10,3"
-                    HorizontalContentAlignment="Left"
-                    Content="设置行业与语气 · 翻译会更像你"
-                    FontSize="11"
-                    Background="#EDEDF0"
-                    BorderBrush="#D8D8DC"
-                    ToolTip="设置默认行业与语气"
-                    Click="PreferencesButton_Click" />
-        </StackPanel>
-
-        <Grid Grid.Row="3" Margin="0,0,0,10">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <TextBlock Text="中文草稿"
-                       Margin="0,0,0,5"
-                       FontSize="12"
-                       FontWeight="SemiBold"
-                       Foreground="#3A3A3C" />
-            <TextBox x:Name="DraftTextBox"
-                     Grid.Row="1"
-                     MinHeight="62"
-                     Padding="9,7"
-                     AcceptsReturn="True"
-                     AcceptsTab="False"
-                     TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto"
-                     VerticalContentAlignment="Top"
-                     Background="White"
-                     BorderBrush="#D8D8DC"
-                     CaretBrush="#1D1D1F" />
         </Grid>
-
-        <Grid Grid.Row="4" Margin="0,0,0,12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <TextBlock Text="译文（可编辑）"
-                       Margin="0,0,0,5"
-                       FontSize="12"
-                       FontWeight="SemiBold"
-                       Foreground="#3A3A3C" />
-            <TextBox x:Name="TranslationTextBox"
-                     Grid.Row="1"
-                     MinHeight="62"
-                     Padding="9,7"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto"
-                     VerticalContentAlignment="Top"
-                     Background="White"
-                     BorderBrush="#D8D8DC"
-                     CaretBrush="#1D1D1F"
-                     TextChanged="TranslationTextBox_TextChanged" />
-        </Grid>
-
-        <Grid Grid.Row="5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Button x:Name="TranslateButton"
-                    Height="34"
-                    Content="翻译"
-                    Click="TranslateButton_Click"
-                    FontWeight="SemiBold" />
-            <Button x:Name="WriteBackButton"
-                    Grid.Column="1"
-                    Height="34"
-                    Margin="8,0,0,0"
-                    Content="写回 Ctrl+S"
-                    Click="WriteBackButton_Click"
-                    IsEnabled="False"
-                    FontWeight="SemiBold" />
-        </Grid>
-
-        <TextBlock x:Name="StatusTextBlock"
-                   Grid.Row="6"
-                   Margin="0,8,0,0"
-                   HorizontalAlignment="Center"
-                   FontSize="11"
-                   Foreground="#8E8E93"
-                   TextWrapping="Wrap"
-                   TextAlignment="Center"
-                   Text="草稿仅在翻译时发送至 DeepSeek" />
     </Grid>
 </Window>
