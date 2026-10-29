@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using Clipboard = System.Windows.Clipboard;
 using DataObject = System.Windows.DataObject;
