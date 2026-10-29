@@ -24,11 +24,12 @@ public sealed class TranslationPreferences
             ' ',
             (value ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-        if (StringInfo.LengthInTextElements(compacted) <= MaximumFieldLength)
+        var text = new StringInfo(compacted);
+        if (text.LengthInTextElements <= MaximumFieldLength)
         {
             return compacted;
         }
 
-        return StringInfo.SubstringByTextElements(compacted, 0, MaximumFieldLength);
+        return text.SubstringByTextElements(0, MaximumFieldLength);
     }
 }
