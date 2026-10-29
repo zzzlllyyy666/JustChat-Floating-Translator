@@ -8,11 +8,16 @@ namespace JustChat.UiSmokeTests;
 internal static class UiDriver
 {
     private const int SwRestore = 9;
+    private const int TestHotKeyId = 0x4A99;
     private const uint InputKeyboard = 1;
     private const uint KeyEventFKeyUp = 0x0002;
     private const uint KeyEventFUnicode = 0x0004;
+    private const uint ModControl = 0x0002;
+    private const uint ModShift = 0x0004;
+    private const uint ModNoRepeat = 0x4000;
     private const ushort VkControl = 0x11;
     private const ushort VkShift = 0x10;
+    private const ushort VkMenu = 0x12;
     private const ushort VkSpace = 0x20;
     private const ushort VkS = 0x53;
 
@@ -100,7 +105,22 @@ internal static class UiDriver
 
     public static void SendControlShiftSpace() => SendChord([VkControl, VkShift], VkSpace);
 
+    public static void SendControlAltSpace() => SendChord([VkControl, VkMenu], VkSpace);
+
     public static void SendControlS() => SendChord([VkControl], VkS);
+
+    public static void ReservePrimaryHotKey(nint handle)
+    {
+        if (!RegisterHotKey(handle, TestHotKeyId, ModControl | ModShift | ModNoRepeat, VkSpace))
+        {
+            throw new InvalidOperationException($"Could not reserve the test hotkey: {Marshal.GetLastWin32Error()}.");
+        }
+    }
+
+    public static void ReleasePrimaryHotKey(nint handle)
+    {
+        _ = UnregisterHotKey(handle, TestHotKeyId);
+    }
 
     public static void TypeAscii(string text)
     {
@@ -224,6 +244,14 @@ internal static class UiDriver
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(nint hWnd, out Rectangle rectangle);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RegisterHotKey(nint hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnregisterHotKey(nint hWnd, int id);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);

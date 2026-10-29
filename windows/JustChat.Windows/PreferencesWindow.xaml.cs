@@ -1,6 +1,6 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Media;
+using Brush = System.Windows.Media.Brush;
 using JustChat.Core;
 
 namespace JustChat.Windows;

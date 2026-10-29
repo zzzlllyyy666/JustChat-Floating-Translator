@@ -34,6 +34,7 @@ internal static class Program
         var checks = new List<string>();
         string? error = null;
         var exitCode = 0;
+        var reservedHotKey = false;
         Process? app = null;
         AutomationElement? mainWindow = null;
         using var server = new MockTranslationServer();
@@ -44,27 +45,46 @@ internal static class Program
 
         try
         {
+            UiDriver.ReservePrimaryHotKey(target.Handle);
+            reservedHotKey = true;
             app = LaunchApp(appPath, appDataDirectory, server.Endpoint);
             mainWindow = UiDriver.WaitForWindow(app.Id, "JustChat", TimeSpan.FromSeconds(30));
             var mainHandle = mainWindow.Current.NativeWindowHandle;
             Pass(checks, "Published JustChat.exe starts and exposes its main window");
 
-            UiDriver.Activate(mainWindow);
-            UiDriver.FindById(mainWindow, "ApiKeyPasswordBox").SetFocus();
-            Thread.Sleep(200);
-            UiDriver.TypeAscii("ci-smoke-key");
-            Translate(mainWindow, "第一段\r\n第二段", FirstTranslation);
-            Pass(checks, "UI translation sends the segmented draft to the mock HTTP service");
+            CompleteFirstRunOnboarding(mainWindow, mainHandle, resultsDirectory);
             if (server.RequestCount != 1)
             {
-                throw new InvalidOperationException($"Expected one translation request, got {server.RequestCount}.");
+                throw new InvalidOperationException($"Expected one onboarding request, got {server.RequestCount}.");
             }
+            Pass(checks, "First-run guide shows all three steps, saves the key and verifies connection");
 
+            var hotKeyHint = UiDriver.FindById(mainWindow, "HotKeyHintTextBlock");
+            UiDriver.WaitUntil(
+                () => hotKeyHint.Current.Name.StartsWith("Ctrl+Alt+Space", StringComparison.Ordinal),
+                "The fallback hotkey is active while the primary hotkey is occupied");
+            Pass(checks, "An occupied primary hotkey automatically switches to Ctrl+Alt+Space");
+
+            Translate(mainWindow, "第一段\r\n第二段", FirstTranslation);
+            if (server.RequestCount != 2)
+            {
+                throw new InvalidOperationException($"Expected two requests after the first translation, got {server.RequestCount}.");
+            }
+            Pass(checks, "UI translation sends the segmented draft to the mock HTTP service");
             UiDriver.CaptureWindow(mainHandle, Path.Combine(resultsDirectory, "01-translation.png"));
+
             SetClipboardText("original-clipboard");
-            WriteBack(mainWindow, target, editorIndex: 0, FirstTranslation, mainHandle);
+            WriteBack(mainWindow, target, editorIndex: 0, FirstTranslation, mainHandle, useFallback: true);
             WaitForClipboard("original-clipboard");
-            Pass(checks, "Global hotkey and Ctrl+S write back to target A and restore the clipboard");
+            Pass(checks, "Fallback hotkey and Ctrl+S write back to target A and restore the clipboard");
+
+            UiDriver.ReleasePrimaryHotKey(target.Handle);
+            reservedHotKey = false;
+            UiDriver.Invoke(UiDriver.FindById(mainWindow, "HotKeyRetryButton"));
+            UiDriver.WaitUntil(
+                () => hotKeyHint.Current.Name.StartsWith("Ctrl+Shift+Space", StringComparison.Ordinal),
+                "The primary hotkey is restored after the conflict is removed");
+            Pass(checks, "The primary hotkey can be restored without restarting the application");
 
             UiDriver.Activate(mainWindow);
             UiDriver.SendControlShiftSpace();
@@ -80,9 +100,9 @@ internal static class Program
             UiDriver.SendControlShiftSpace();
             UiDriver.WaitForForeground(mainHandle, "The global hotkey reopens the floating panel");
             Translate(mainWindow, "第三段\r\n第四段", SecondTranslation);
-            if (server.RequestCount != 2)
+            if (server.RequestCount != 3)
             {
-                throw new InvalidOperationException($"Expected two translation requests, got {server.RequestCount}.");
+                throw new InvalidOperationException($"Expected three requests after the second translation, got {server.RequestCount}.");
             }
 
             SetClipboardText("second-original-clipboard");
@@ -109,13 +129,22 @@ internal static class Program
 
             StopApp(app);
             app = null;
-            app = LaunchApp(appPath, appDataDirectory, server.Endpoint);
+            app = LaunchApp(appPath, appDataDirectory, server.Endpoint, theme: "dark");
             mainWindow = UiDriver.WaitForWindow(app.Id, "JustChat", TimeSpan.FromSeconds(30));
             var preferencesButton = UiDriver.FindById(mainWindow, "PreferencesButton");
             UiDriver.WaitUntil(
                 () => preferencesButton.Current.Name == "Cloud QA · Direct",
                 "Saved preferences are loaded after restart");
-            Pass(checks, "Saved preferences survive an application restart");
+            UiDriver.CaptureWindow(
+                mainWindow.Current.NativeWindowHandle,
+                Path.Combine(resultsDirectory, "04-dark-restart.png"));
+            Pass(checks, "Dark theme starts cleanly and saved preferences survive restart");
+
+            UiDriver.Invoke(UiDriver.FindById(mainWindow, "GuideButton"));
+            UiDriver.Invoke(UiDriver.FindById(mainWindow, "OnboardingSkipButton"));
+            UiDriver.Invoke(UiDriver.FindById(mainWindow, "OnboardingContinueButton"));
+            UiDriver.Invoke(UiDriver.FindById(mainWindow, "OnboardingFinishButton"));
+            Pass(checks, "The complete guide can be reopened from the main window");
             Log("All Windows UI acceptance checks passed.");
         }
         catch (Exception exception)
@@ -127,6 +156,10 @@ internal static class Program
         }
         finally
         {
+            if (reservedHotKey)
+            {
+                UiDriver.ReleasePrimaryHotKey(target.Handle);
+            }
             if (app is not null)
             {
                 StopApp(app);
@@ -148,7 +181,7 @@ internal static class Program
         return exitCode;
     }
 
-    private static Process LaunchApp(string appPath, string appDataDirectory, Uri endpoint)
+    private static Process LaunchApp(string appPath, string appDataDirectory, Uri endpoint, string theme = "light")
     {
         var startInfo = new ProcessStartInfo
         {
@@ -159,7 +192,23 @@ internal static class Program
         startInfo.Environment["APPDATA"] = appDataDirectory;
         startInfo.Environment["JUSTCHAT_CONFIG_DIRECTORY"] = Path.Combine(appDataDirectory, "JustChat");
         startInfo.Environment["JUSTCHAT_TRANSLATION_ENDPOINT"] = endpoint.AbsoluteUri;
+        startInfo.Environment["JUSTCHAT_THEME"] = theme;
         return Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start JustChat.");
+    }
+
+    private static void CompleteFirstRunOnboarding(
+        AutomationElement mainWindow,
+        nint mainHandle,
+        string resultsDirectory)
+    {
+        UiDriver.Activate(mainWindow);
+        UiDriver.CaptureWindow(mainHandle, Path.Combine(resultsDirectory, "00-onboarding.png"));
+        UiDriver.FindById(mainWindow, "OnboardingApiKeyPasswordBox").SetFocus();
+        Thread.Sleep(200);
+        UiDriver.TypeAscii("ci-smoke-key");
+        UiDriver.Invoke(UiDriver.FindById(mainWindow, "OnboardingConnectButton"));
+        UiDriver.Invoke(UiDriver.FindById(mainWindow, "OnboardingContinueButton"));
+        UiDriver.Invoke(UiDriver.FindById(mainWindow, "OnboardingFinishButton"));
     }
 
     private static void Translate(AutomationElement mainWindow, string draft, string expected)
@@ -177,11 +226,19 @@ internal static class Program
         TargetWindowHost target,
         int editorIndex,
         string expected,
-        nint mainHandle)
+        nint mainHandle,
+        bool useFallback = false)
     {
         target.FocusEditor(editorIndex);
         UiDriver.WaitForForeground(target.Handle, "The intended target window is active");
-        UiDriver.SendControlShiftSpace();
+        if (useFallback)
+        {
+            UiDriver.SendControlAltSpace();
+        }
+        else
+        {
+            UiDriver.SendControlShiftSpace();
+        }
         UiDriver.WaitForForeground(mainHandle, "The global hotkey captures the intended target and opens JustChat");
         UiDriver.SendControlS();
         var editor = UiDriver.FindById(

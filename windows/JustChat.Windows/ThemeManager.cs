@@ -2,6 +2,7 @@ using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using Application = System.Windows.Application;
 
 namespace JustChat.Windows;
 
@@ -64,6 +65,16 @@ internal static class ThemeManager
 
     private static bool ReadDarkPreference()
     {
+        var configuredTheme = Environment.GetEnvironmentVariable("JUSTCHAT_THEME");
+        if (string.Equals(configuredTheme, "dark", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (string.Equals(configuredTheme, "light", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         try
         {
             using var key = Registry.CurrentUser.OpenSubKey(
