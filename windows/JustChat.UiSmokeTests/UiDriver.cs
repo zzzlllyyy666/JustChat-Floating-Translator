@@ -21,10 +21,9 @@ internal static class UiDriver
         var processCondition = new PropertyCondition(AutomationElement.ProcessIdProperty, processId);
         var windowCondition = new AndCondition(
             processCondition,
-            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Window),
             new PropertyCondition(AutomationElement.NameProperty, title));
         return WaitForElement(
-            () => AutomationElement.RootElement.FindFirst(TreeScope.Children, windowCondition),
+            () => AutomationElement.RootElement.FindFirst(TreeScope.Descendants, windowCondition),
             $"Window '{title}' for process {processId}",
             timeout);
     }
