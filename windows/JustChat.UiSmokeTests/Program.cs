@@ -65,6 +65,18 @@ internal static class Program
                 "The fallback hotkey is active while the primary hotkey is occupied");
             Pass(checks, "An occupied primary hotkey automatically switches to Ctrl+Alt+Space");
 
+            var languageSelector = UiDriver.FindById(mainWindow, "TargetLanguageSelector");
+            var languageSelection = (SelectionPattern)languageSelector.GetCurrentPattern(SelectionPattern.Pattern);
+            UiDriver.WaitUntil(
+                () =>
+                {
+                    var selection = languageSelection.Current.GetSelection();
+                    return selection.Length == 1 &&
+                        selection[0].Current.Name.Contains("英语", StringComparison.Ordinal);
+                },
+                "The selected language displays a readable Chinese label");
+            Pass(checks, "Target language selection displays a readable label instead of a type name");
+
             Translate(mainWindow, "第一段\r\n第二段", FirstTranslation);
             if (server.RequestCount != 2)
             {

@@ -1,7 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Style TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
         <Setter Property="TextWrapping" Value="NoWrap" />
     </Style>
 
@@ -215,9 +214,8 @@
                                       IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
                             <ContentPresenter Margin="0"
                                               VerticalAlignment="Center"
-                                              Content="{TemplateBinding SelectionBoxItem}"
-                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+                                              Content="{TemplateBinding SelectedItem}"
+                                              ContentTemplate="{TemplateBinding ItemTemplate}" />
                         </ToggleButton>
                         <Popup x:Name="Popup"
                                Placement="Bottom"
