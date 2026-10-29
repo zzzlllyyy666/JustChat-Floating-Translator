@@ -30,7 +30,7 @@ internal static class ThemeManager
         var themeName = IsDark ? "Dark" : "Light";
         var theme = new ResourceDictionary
         {
-            Source = new Uri($"/JustChat;component/Themes/{themeName}.xaml", UriKind.Absolute)
+            Source = new Uri($"pack://application:,,,/JustChat;component/Themes/{themeName}.xaml", UriKind.Absolute)
         };
         if (Application.Current.Resources.MergedDictionaries.Count == 0)
         {
