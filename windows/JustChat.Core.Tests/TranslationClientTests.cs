@@ -25,7 +25,7 @@ public sealed class TranslationClientTests
             Assert.Equal("deepseek-flash", root.GetProperty("model").GetString());
             Assert.False(root.GetProperty("stream").GetBoolean());
             Assert.Equal(4096, root.GetProperty("max_tokens").GetInt32());
-            Assert.False(root.TryGetProperty("maxTokens", out _));
+            Assert.False(root.TryGetProperty("maxTokens", out var _));
             Assert.Equal("json_object", root.GetProperty("response_format").GetProperty("type").GetString());
             Assert.Equal("disabled", root.GetProperty("thinking").GetProperty("type").GetString());
 
