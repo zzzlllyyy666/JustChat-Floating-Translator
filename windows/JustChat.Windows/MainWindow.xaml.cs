@@ -1,6 +1,6 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Media;
+using Brushes = System.Windows.Media.Brushes;
 using JustChat.Core;
 
 namespace JustChat.Windows;
@@ -9,14 +9,75 @@ public partial class MainWindow : Window
 {
     private readonly TranslationClient _translationClient = new();
     private readonly DeepSeekCredentialStore _credentialStore = new();
+    private GlobalHotKeyController? _globalHotKeyController;
     private bool _isTranslating;
+    private bool _allowClose;
 
     public MainWindow()
     {
         InitializeComponent();
         TargetLanguageSelector.ItemsSource = TranslationTargetLanguage.All;
         TargetLanguageSelector.SelectedItem = TranslationTargetLanguage.English;
+        SourceInitialized += MainWindow_SourceInitialized;
+        Closing += MainWindow_Closing;
         LoadSavedApiKey();
+    }
+
+    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        try
+        {
+            _globalHotKeyController = new GlobalHotKeyController(this, TogglePanel);
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            SetStatus("Ctrl+Shift+Space 注册失败，可能被占用；请使用托盘图标打开", isError: true);
+        }
+    }
+
+    public void TogglePanel()
+    {
+        if (FloatingPanelPolicy.ShouldHideOnToggle(IsVisible, IsActive))
+        {
+            Hide();
+        }
+        else
+        {
+            ShowPanel();
+        }
+    }
+
+    public void ShowPanel()
+    {
+        if (!IsVisible)
+        {
+            Show();
+        }
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+        DraftTextBox.Focus();
+    }
+
+    public void PrepareForExit()
+    {
+        _allowClose = true;
+        _globalHotKeyController?.Dispose();
+    }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_allowClose)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        Hide();
     }
 
     private void LoadSavedApiKey()
