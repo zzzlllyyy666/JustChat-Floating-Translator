@@ -36,7 +36,7 @@ public partial class MainWindow : Window
     {
         var configuredEndpoint = Environment.GetEnvironmentVariable("JUSTCHAT_TRANSLATION_ENDPOINT");
         return Uri.TryCreate(configuredEndpoint, UriKind.Absolute, out var endpoint) &&
-            endpoint.Scheme is Uri.UriSchemeHttp or Uri.UriSchemeHttps
+            (endpoint.Scheme == Uri.UriSchemeHttp || endpoint.Scheme == Uri.UriSchemeHttps)
             ? new TranslationClient(endpoint: endpoint)
             : new TranslationClient();
     }
