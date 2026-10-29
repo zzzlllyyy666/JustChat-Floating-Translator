@@ -7,7 +7,7 @@ namespace JustChat.Windows;
 
 public partial class MainWindow : Window
 {
-    private readonly TranslationClient _translationClient = new();
+    private readonly TranslationClient _translationClient = CreateTranslationClient();
     private readonly DeepSeekCredentialStore _credentialStore = new();
     private readonly TranslationPreferencesStore _preferencesStore = new();
     private GlobalHotKeyController? _globalHotKeyController;
@@ -30,6 +30,15 @@ public partial class MainWindow : Window
         LoadSavedPreferences();
         UpdatePreferencesSummary();
         UpdateOperationState();
+    }
+
+    private static TranslationClient CreateTranslationClient()
+    {
+        var configuredEndpoint = Environment.GetEnvironmentVariable("JUSTCHAT_TRANSLATION_ENDPOINT");
+        return Uri.TryCreate(configuredEndpoint, UriKind.Absolute, out var endpoint) &&
+            endpoint.Scheme is Uri.UriSchemeHttp or Uri.UriSchemeHttps
+            ? new TranslationClient(endpoint: endpoint)
+            : new TranslationClient();
     }
 
     private void MainWindow_SourceInitialized(object? sender, EventArgs e)
