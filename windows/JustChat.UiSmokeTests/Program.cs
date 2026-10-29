@@ -9,8 +9,8 @@ namespace JustChat.UiSmokeTests;
 
 internal static class Program
 {
-    private const string FirstTranslation = "First paragraph\r\nSecond paragraph";
-    private const string SecondTranslation = "Third paragraph\r\nFourth paragraph";
+    private const string FirstTranslation = "First paragraph.\r\nSecond paragraph.";
+    private const string SecondTranslation = "Third paragraph.\r\nFourth paragraph.";
 
     [STAThread]
     public static int Main(string[] args)
