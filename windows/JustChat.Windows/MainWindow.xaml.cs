@@ -10,7 +10,10 @@ public partial class MainWindow : Window
     private readonly TranslationClient _translationClient = new();
     private readonly DeepSeekCredentialStore _credentialStore = new();
     private GlobalHotKeyController? _globalHotKeyController;
+    private ForegroundWindowTracker? _foregroundWindowTracker;
+    private TextInserter? _textInserter;
     private bool _isTranslating;
+    private bool _isWritingBack;
     private bool _allowClose;
 
     public MainWindow()
@@ -20,11 +23,23 @@ public partial class MainWindow : Window
         TargetLanguageSelector.SelectedItem = TranslationTargetLanguage.English;
         SourceInitialized += MainWindow_SourceInitialized;
         Closing += MainWindow_Closing;
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
         LoadSavedApiKey();
+        UpdateWriteBackState();
     }
 
     private void MainWindow_SourceInitialized(object? sender, EventArgs e)
     {
+        try
+        {
+            _foregroundWindowTracker = new ForegroundWindowTracker();
+            _textInserter = new TextInserter(_foregroundWindowTracker);
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            SetStatus("无法跟踪目标窗口，文本写回已停用", isError: true);
+        }
+
         try
         {
             _globalHotKeyController = new GlobalHotKeyController(this, TogglePanel);
@@ -33,6 +48,8 @@ public partial class MainWindow : Window
         {
             SetStatus("Ctrl+Shift+Space 注册失败，可能被占用；请使用托盘图标打开", isError: true);
         }
+
+        UpdateWriteBackState();
     }
 
     public void TogglePanel()
@@ -49,6 +66,11 @@ public partial class MainWindow : Window
 
     public void ShowPanel()
     {
+        if (!IsActive)
+        {
+            _foregroundWindowTracker?.CaptureForegroundWindow();
+        }
+
         if (!IsVisible)
         {
             Show();
@@ -67,6 +89,7 @@ public partial class MainWindow : Window
     {
         _allowClose = true;
         _globalHotKeyController?.Dispose();
+        _foregroundWindowTracker?.Dispose();
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -120,7 +143,7 @@ public partial class MainWindow : Window
 
     private async void TranslateButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isTranslating)
+        if (_isTranslating || _isWritingBack)
         {
             return;
         }
@@ -145,6 +168,7 @@ public partial class MainWindow : Window
         TranslateButton.IsEnabled = false;
         TranslateButton.Content = "正在翻译…";
         TranslationTextBox.Clear();
+        UpdateWriteBackState();
         SetStatus("正在请求 DeepSeek，中文草稿已保留…");
 
         try
@@ -163,7 +187,7 @@ public partial class MainWindow : Window
             }
 
             TranslationTextBox.Text = translation;
-            SetStatus("翻译完成");
+            SetStatus("翻译完成，译文可以编辑");
         }
         catch (TranslationClientException exception)
         {
@@ -178,7 +202,104 @@ public partial class MainWindow : Window
             _isTranslating = false;
             TranslateButton.Content = "翻译";
             TranslateButton.IsEnabled = true;
+            UpdateWriteBackState();
         }
+    }
+
+    private async void WriteBackButton_Click(object sender, RoutedEventArgs e)
+    {
+        await WriteBackAsync();
+    }
+
+    private async void MainWindow_PreviewKeyDown(
+        object sender,
+        System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.S ||
+            System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.Control)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await WriteBackAsync();
+    }
+
+    private async Task WriteBackAsync()
+    {
+        if (_isTranslating || _isWritingBack)
+        {
+            return;
+        }
+
+        if (_textInserter is null)
+        {
+            SetStatus("目标窗口跟踪不可用，无法写回；请复制译文后手动粘贴", isError: true);
+            return;
+        }
+
+        var text = TranslationTextBox.Text;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            SetStatus("没有可写回的译文", isError: true);
+            return;
+        }
+
+        _isWritingBack = true;
+        TranslateButton.IsEnabled = false;
+        DraftTextBox.IsReadOnly = true;
+        TranslationTextBox.IsReadOnly = true;
+        UpdateWriteBackState();
+        SetStatus("正在写回最近使用的输入框…");
+
+        try
+        {
+            var result = await _textInserter.InsertAsync(text);
+            DraftTextBox.Clear();
+            TranslationTextBox.Clear();
+            var message = result.ClipboardRestore switch
+            {
+                ClipboardRestoreResult.Restored => "已写回，原剪贴板已恢复",
+                ClipboardRestoreResult.ChangedByUser => "已写回；你已更新剪贴板，未恢复旧内容",
+                ClipboardRestoreResult.Failed => "已写回，但原剪贴板恢复失败",
+                _ => "已写回"
+            };
+            SetStatus(message, isError: result.ClipboardRestore == ClipboardRestoreResult.Failed);
+        }
+        catch (TextInsertionException exception)
+        {
+            SetStatus(exception.Message, isError: true);
+            ShowPanel();
+        }
+        catch (Exception)
+        {
+            SetStatus("写回失败，草稿和译文仍保留，请重试或手动粘贴", isError: true);
+            ShowPanel();
+        }
+        finally
+        {
+            _isWritingBack = false;
+            DraftTextBox.IsReadOnly = false;
+            TranslationTextBox.IsReadOnly = false;
+            TranslateButton.IsEnabled = true;
+            UpdateWriteBackState();
+        }
+    }
+
+    private void TranslationTextBox_TextChanged(
+        object sender,
+        System.Windows.Controls.TextChangedEventArgs e)
+    {
+        UpdateWriteBackState();
+    }
+
+    private void UpdateWriteBackState()
+    {
+        WriteBackButton.IsEnabled =
+            !_isTranslating &&
+            !_isWritingBack &&
+            _textInserter is not null &&
+            !string.IsNullOrWhiteSpace(TranslationTextBox.Text);
     }
 
     private void SetStatus(string message, bool isError = false)
