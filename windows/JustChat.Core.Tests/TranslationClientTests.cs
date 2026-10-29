@@ -159,7 +159,7 @@ public sealed class TranslationClientTests
             TranslationTargetLanguage.English,
             apiKey: "test-key");
 
-        Assert.Equal("Hello", result);
+        Assert.Equal("Hello.", result);
         Assert.Equal(2, handler.RequestCount);
     }
 
@@ -174,6 +174,144 @@ public sealed class TranslationClientTests
 
         Assert.Equal(TranslationClientErrorKind.IncompleteTranslation, exception.ErrorKind);
         Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_PreservesLockedEnglishPrefix()
+    {
+        var (client, handler) = CreateClient(async (request, _) =>
+        {
+            var body = await request.Content!.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(body);
+            var content = document.RootElement.GetProperty("messages")[1]
+                .GetProperty("content").GetString()!;
+            using var userDocument = JsonDocument.Parse(content);
+            Assert.Equal(
+                "Let me think about it.",
+                userDocument.RootElement.GetProperty("locked_prefix").GetString());
+            Assert.Equal(
+                "让我想一想",
+                userDocument.RootElement.GetProperty("text_to_translate").GetString());
+            return TranslationResponse(new { translation = "let me think" });
+        });
+
+        var result = await client.TranslateAsync(
+            "Let me think about it.让我想一想",
+            TranslationTargetLanguage.English,
+            apiKey: "test-key");
+
+        Assert.Equal("Let me think about it. Let me think.", result);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_MultilineDraftUsesSegmentedProtocol()
+    {
+        var (client, handler) = CreateClient(async (request, _) =>
+        {
+            var body = await request.Content!.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(body);
+            var content = document.RootElement.GetProperty("messages")[1]
+                .GetProperty("content").GetString()!;
+            using var userDocument = JsonDocument.Parse(content);
+            var segments = userDocument.RootElement.GetProperty("segments");
+            Assert.Equal(2, segments.GetArrayLength());
+            Assert.Equal(0, segments[0].GetProperty("id").GetInt32());
+            Assert.Equal("第一段", segments[0].GetProperty("text").GetString());
+            Assert.Equal(1, segments[1].GetProperty("id").GetInt32());
+            Assert.Equal("第二段", segments[1].GetProperty("text").GetString());
+
+            return TranslationResponse(new
+            {
+                translations = new[]
+                {
+                    new { id = 0, translation = "first paragraph" },
+                    new { id = 1, translation = "second paragraph" }
+                }
+            });
+        });
+
+        var result = await client.TranslateAsync(
+            "  第一段  \n第二段\r\nEnglish only",
+            TranslationTargetLanguage.English,
+            apiKey: "test-key");
+
+        Assert.Equal("  First paragraph.  \nSecond paragraph.\r\nEnglish only", result);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_MissingSegmentIsRetried()
+    {
+        var (client, handler) = CreateClient(async (request, requestCount) =>
+        {
+            var body = await request.Content!.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(body);
+            var systemPrompt = document.RootElement.GetProperty("messages")[0]
+                .GetProperty("content").GetString();
+            if (requestCount == 2)
+            {
+                Assert.Contains("previous attempt was rejected", systemPrompt);
+            }
+
+            var translations = requestCount == 1
+                ? new[] { new { id = 0, translation = "First paragraph." } }
+                : new[]
+                {
+                    new { id = 0, translation = "First paragraph." },
+                    new { id = 1, translation = "Second paragraph." }
+                };
+            return TranslationResponse(new { translations });
+        });
+
+        var result = await client.TranslateAsync(
+            "第一段\n第二段",
+            TranslationTargetLanguage.English,
+            apiKey: "test-key");
+
+        Assert.Equal("First paragraph.\nSecond paragraph.", result);
+        Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_ExactRepeatedDraftIsTranslatedOnce()
+    {
+        const string paragraph = "当前限制是基础词库较小而且候选词仍需继续优化";
+        var (client, handler) = CreateClient(async (request, _) =>
+        {
+            var body = await request.Content!.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(body);
+            var content = document.RootElement.GetProperty("messages")[1]
+                .GetProperty("content").GetString()!;
+            using var userDocument = JsonDocument.Parse(content);
+            Assert.Equal(
+                paragraph,
+                userDocument.RootElement.GetProperty("text_to_translate").GetString());
+            return TranslationResponse(new { translation = "improved" });
+        });
+
+        var result = await client.TranslateAsync(
+            paragraph + paragraph,
+            TranslationTargetLanguage.English,
+            apiKey: "test-key");
+
+        Assert.Equal("Improved. Improved.", result);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_TextWithoutChineseDoesNotCallApi()
+    {
+        var (client, handler) = CreateClient((_, _) =>
+            Task.FromResult(TranslationResponse(new { translation = "unused" })));
+
+        var result = await client.TranslateAsync(
+            "Already English。",
+            TranslationTargetLanguage.English,
+            apiKey: "test-key");
+
+        Assert.Equal("Already English.", result);
+        Assert.Equal(0, handler.RequestCount);
     }
 
     [Fact]

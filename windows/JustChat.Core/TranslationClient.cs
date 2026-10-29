@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace JustChat.Core;
 
@@ -25,12 +24,6 @@ public sealed class TranslationClient
     {
         PropertyNameCaseInsensitive = true
     };
-    private static readonly Regex ChineseContentPattern = new(
-        "[\\u3400-\\u9fff，。！？；：、…]",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex LineBreakPattern = new(
-        "\\r\\n|\\n",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly HttpClient _httpClient;
     private readonly Uri _endpoint;
@@ -76,14 +69,41 @@ public sealed class TranslationClient
         }
 
         var effectivePreferences = preferences ?? TranslationPreferences.Empty;
+        var boundary = TranslationBoundary.ResolveTranslationBoundary(
+            text,
+            targetLanguage: targetLanguage);
+        if (!TranslationBoundary.HasChineseCharacters(boundary.TranslatableText))
+        {
+            return TranslationBoundary.JoinLockedPrefix(
+                boundary.LockedPrefix,
+                TranslationBoundary.TranslateChinesePunctuation(
+                    boundary.TranslatableText,
+                    targetLanguage),
+                targetLanguage);
+        }
+
+        var repeatedDraft = TranslationBoundary.SplitExactRepeatedDraft(boundary.TranslatableText);
+        var sourceForModel = repeatedDraft?.Unit ?? boundary.TranslatableText;
+        var segmentedPlan = sourceForModel.Contains('\n')
+            ? TranslationBoundary.MakeSegmentedTranslationPlan(sourceForModel)
+            : null;
+        var normalizedTranslation = string.Empty;
+
         for (var attempt = 0; attempt < 2; attempt++)
         {
-            var messages = TranslationPromptBuilder.CreateMessages(
-                string.Empty,
-                text,
-                targetLanguage,
-                effectivePreferences,
-                attempt > 0);
+            var messages = segmentedPlan is null
+                ? TranslationPromptBuilder.CreateMessages(
+                    boundary.LockedPrefix,
+                    sourceForModel,
+                    targetLanguage,
+                    effectivePreferences,
+                    attempt > 0)
+                : TranslationPromptBuilder.CreateSegmentedMessages(
+                    boundary.LockedPrefix,
+                    segmentedPlan,
+                    targetLanguage,
+                    effectivePreferences,
+                    attempt > 0);
             var content = await SendAsync(
                 messages,
                 trimmedApiKey,
@@ -93,17 +113,80 @@ public sealed class TranslationClient
                 continue;
             }
 
-            var translation = ParseTranslation(content)?.Trim();
-            if (translation is not null &&
-                IsCompleteTranslation(text, translation, targetLanguage))
+            if (segmentedPlan is not null)
             {
-                return translation;
+                var segments = ParseSegmentedTranslation(content);
+                if (segments is null)
+                {
+                    continue;
+                }
+
+                normalizedTranslation = TranslationBoundary.AssembleSegmentedTranslation(
+                    segmentedPlan,
+                    segments,
+                    boundary.LockedPrefix,
+                    targetLanguage) ?? string.Empty;
             }
+            else
+            {
+                var translation = ParseTranslation(content);
+                if (translation is null)
+                {
+                    continue;
+                }
+
+                normalizedTranslation = TranslationBoundary.NormalizeTargetTranslation(
+                    translation,
+                    sourceForModel,
+                    boundary.LockedPrefix,
+                    targetLanguage);
+            }
+
+            if (TranslationBoundary.IsCompleteTargetTranslation(
+                    sourceForModel,
+                    normalizedTranslation,
+                    targetLanguage))
+            {
+                break;
+            }
+
+            normalizedTranslation = string.Empty;
         }
 
-        throw new TranslationClientException(
-            TranslationClientErrorKind.IncompleteTranslation,
-            "翻译结果不完整，请重试");
+        if (normalizedTranslation.Length == 0)
+        {
+            throw new TranslationClientException(
+                TranslationClientErrorKind.IncompleteTranslation,
+                "翻译结果不完整，请重试");
+        }
+
+        var completeTranslation = repeatedDraft is null
+            ? normalizedTranslation
+            : string.Join(
+                repeatedDraft.Separator,
+                Enumerable.Repeat(normalizedTranslation, repeatedDraft.Count));
+        if (!TranslationBoundary.IsCompleteTargetTranslation(
+                boundary.TranslatableText,
+                completeTranslation,
+                targetLanguage))
+        {
+            throw new TranslationClientException(
+                TranslationClientErrorKind.IncompleteTranslation,
+                "翻译结果不完整，请重试");
+        }
+
+        var result = TranslationBoundary.JoinLockedPrefix(
+            boundary.LockedPrefix,
+            completeTranslation,
+            targetLanguage).Trim();
+        if (result.Length == 0)
+        {
+            throw new TranslationClientException(
+                TranslationClientErrorKind.EmptyTranslation,
+                "翻译结果为空，请重试");
+        }
+
+        return result;
     }
 
     private async Task<string?> SendAsync(
@@ -183,24 +266,42 @@ public sealed class TranslationClient
         }
     }
 
-    private static bool IsCompleteTranslation(
-        string sourceText,
-        string translatedText,
-        TranslationTargetLanguage targetLanguage)
+    private static TranslationSegment[]? ParseSegmentedTranslation(string content)
     {
-        if (string.IsNullOrWhiteSpace(translatedText))
+        try
         {
-            return false;
-        }
+            using var document = JsonDocument.Parse(content);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("translations", out var items) ||
+                items.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
 
-        if (targetLanguage != TranslationTargetLanguage.Japanese &&
-            ChineseContentPattern.IsMatch(translatedText))
+            var segments = new List<TranslationSegment>();
+            foreach (var item in items.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object ||
+                    !item.TryGetProperty("id", out var id) ||
+                    !id.TryGetInt32(out var segmentId) ||
+                    !item.TryGetProperty("translation", out var translation) ||
+                    translation.ValueKind != JsonValueKind.String)
+                {
+                    return null;
+                }
+
+                segments.Add(new TranslationSegment(
+                    segmentId,
+                    translation.GetString() ?? string.Empty));
+            }
+
+            return segments.ToArray();
+        }
+        catch (JsonException)
         {
-            return false;
+            return null;
         }
-
-        return LineBreakPattern.Matches(sourceText).Count ==
-               LineBreakPattern.Matches(translatedText).Count;
     }
 
     private static string HttpErrorMessage(HttpStatusCode statusCode, string payload)

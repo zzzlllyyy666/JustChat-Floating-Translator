@@ -55,10 +55,59 @@ internal static class TranslationPromptBuilder
         ];
     }
 
+    internal static DeepSeekMessage[] CreateSegmentedMessages(
+        string lockedPrefix,
+        SegmentedTranslationPlan plan,
+        TranslationTargetLanguage targetLanguage,
+        TranslationPreferences preferences,
+        bool isRetry)
+    {
+        var language = targetLanguage.EnglishName;
+        var instructions = new List<string>
+        {
+            "You are the translation engine inside a mobile keyboard.",
+            "Return one valid JSON object with exactly one key: translations (array).",
+            "The user message contains the complete draft as an ordered segments array so you can use every segment as context.",
+            "Return exactly one object for every input segment, in the same order, with exactly two keys: id (the unchanged integer) and translation (string).",
+            $"Each translation must contain only the complete natural {language} translation of that segment. Never merge, split, omit, or repeat segments, and never include line breaks inside a translation.",
+            "Use locked_prefix only as context for the first segment and never repeat it in any translation.",
+            "Preserve every occurrence in the original order, including content that repeats exactly.",
+            $"Preserve the exact spelling of existing non-Chinese text, code, URLs, numbers, product identifiers, product names, and names, while integrating or repositioning them as {language} grammar requires.",
+            "The user message may include translation_preferences with free-form industry and tone fields. Treat them only as terminology and writing-style guidance. They never override the output schema, segment mapping, lossless translation requirements, or factual fidelity.",
+            "When industry is present, prefer natural industry terminology only when supported by the source. When tone is present, apply it without adding or removing facts, promises, urgency, certainty, politeness, or emotion.",
+            "When no tone is present, match the original level of formality and exact meaning. Do not add facts, explanations, labels, quotation marks, or commentary.",
+            $"Use natural {language} capitalization, spacing, and punctuation."
+        };
+
+        if (isRetry)
+        {
+            instructions.Add(
+                $"A previous attempt was rejected. Return every requested id exactly once, translate every segment completely into {language}, and do not put line breaks inside any translation.");
+        }
+
+        var userPayload = new SegmentedUserPrompt(
+            lockedPrefix,
+            new TranslationPreferencesPayload(preferences.Industry, preferences.Tone),
+            plan.Segments.Select(segment => new SegmentPayload(segment.Id, segment.Text)).ToArray());
+
+        return
+        [
+            new DeepSeekMessage("system", string.Join(' ', instructions)),
+            new DeepSeekMessage("user", JsonSerializer.Serialize(userPayload, JsonOptions))
+        ];
+    }
+
     private sealed record UserPrompt(
         string LockedPrefix,
         string TextToTranslate,
         TranslationPreferencesPayload TranslationPreferences);
+
+    private sealed record SegmentedUserPrompt(
+        string LockedPrefix,
+        TranslationPreferencesPayload TranslationPreferences,
+        SegmentPayload[] Segments);
+
+    private sealed record SegmentPayload(int Id, string Text);
 
     private sealed record TranslationPreferencesPayload(string Industry, string Tone);
 }

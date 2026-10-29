@@ -7,6 +7,7 @@ public enum TranslationClientErrorKind
     DraftTooLong,
     InvalidResponse,
     IncompleteTranslation,
+    EmptyTranslation,
     Server
 }
 
