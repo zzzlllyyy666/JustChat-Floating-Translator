@@ -66,6 +66,8 @@ internal static class Program
             Pass(checks, "An occupied primary hotkey automatically switches to Ctrl+Alt+Space");
 
             var languageSelector = UiDriver.FindById(mainWindow, "TargetLanguageSelector");
+            var languageDropDown = (ExpandCollapsePattern)languageSelector.GetCurrentPattern(ExpandCollapsePattern.Pattern);
+            languageDropDown.Expand();
             var languageSelection = (SelectionPattern)languageSelector.GetCurrentPattern(SelectionPattern.Pattern);
             UiDriver.WaitUntil(
                 () =>
@@ -75,6 +77,7 @@ internal static class Program
                         selection[0].Current.Name.Contains("英语", StringComparison.Ordinal);
                 },
                 "The selected language displays a readable Chinese label");
+            languageDropDown.Collapse();
             Pass(checks, "Target language selection displays a readable label instead of a type name");
 
             Translate(mainWindow, "第一段\r\n第二段", FirstTranslation);

@@ -112,6 +112,11 @@
                                     <TextBlock Text="{Binding MenuLabel}" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
+                            <ComboBox.ItemContainerStyle>
+                                <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding MenuLabel}" />
+                                </Style>
+                            </ComboBox.ItemContainerStyle>
                         </ComboBox>
                         <Button x:Name="PreferencesButton"
                                 Grid.Row="1"
