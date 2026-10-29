@@ -37,7 +37,9 @@ JustChat 0.4.4 已在 **Apple Silicon（arm64）＋ macOS 26.6.2＋ Swift 6.3.3*
 
 ## Windows 版（开发预览）
 
-`windows/` 包含独立的 .NET 10＋WPF 工程，不依赖 Mac 版或常驻 Node 服务。当前仅提供置顶基础面板、六种目标语言、中文草稿和只读译文区域；DeepSeek 翻译、全局快捷键、托盘和文本写回尚未接入，界面中的禁用按钮不会发送文本或生成译文。
+`windows/` 包含独立的 .NET 10＋WPF 工程，不依赖 Mac 版或常驻 Node 服务。当前提供置顶面板、六种目标语言、DeepSeek 基础翻译、30 秒超时、最多两次完整性尝试和错误提示。全局快捷键、托盘、文本写回、自定义行业与语气，以及 Mac 版的前缀锁定、分段和重复草稿优化尚未接入。
+
+填写自己的 DeepSeek API Key 后，点击“保存 Key”可使用 Windows DPAPI 按当前用户加密，并保存到 `%APPDATA%\JustChat\deepseek.key`。草稿只会在主动点击“翻译”时发送至 DeepSeek；翻译期间如果修改草稿或目标语言，旧请求的结果不会回填。
 
 在安装了 .NET 10 SDK 的 Windows 电脑上，可从仓库根目录运行核心测试并构建 x64 单文件应用：
 

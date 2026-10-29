@@ -22,6 +22,16 @@ public sealed class TranslationTargetLanguage
     public string Code { get; }
     public string ChineseName { get; }
     public string NativeName { get; }
+    public string EnglishName => Code switch
+    {
+        "en" => "English",
+        "ja" => "Japanese",
+        "ko" => "Korean",
+        "es" => "Spanish",
+        "fr" => "French",
+        "de" => "German",
+        _ => throw new InvalidOperationException($"Unsupported language code: {Code}")
+    };
     public string ShortCode => Code.ToUpperInvariant();
     public string MenuLabel => $"{ChineseName} {NativeName}";
 }
