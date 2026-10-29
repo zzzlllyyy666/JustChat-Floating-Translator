@@ -236,7 +236,7 @@ public sealed class TranslationClientTests
             TranslationTargetLanguage.English,
             apiKey: "test-key");
 
-        Assert.Equal("  First paragraph.  \nSecond paragraph.\r\nEnglish only", result);
+        Assert.Equal("First paragraph.  \nSecond paragraph.\r\nEnglish only", result);
         Assert.Equal(1, handler.RequestCount);
     }
 
