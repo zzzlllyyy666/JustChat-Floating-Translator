@@ -45,7 +45,7 @@ internal static class Program
 
         try
         {
-            UiDriver.ReservePrimaryHotKey(target.Handle);
+            target.ReservePrimaryHotKey();
             reservedHotKey = true;
             app = LaunchApp(appPath, appDataDirectory, server.Endpoint);
             mainWindow = UiDriver.WaitForWindow(app.Id, "JustChat", TimeSpan.FromSeconds(30));
@@ -78,7 +78,7 @@ internal static class Program
             WaitForClipboard("original-clipboard");
             Pass(checks, "Fallback hotkey and Ctrl+S write back to target A and restore the clipboard");
 
-            UiDriver.ReleasePrimaryHotKey(target.Handle);
+            target.ReleasePrimaryHotKey();
             reservedHotKey = false;
             UiDriver.Invoke(UiDriver.FindById(mainWindow, "HotKeyRetryButton"));
             UiDriver.WaitUntil(
@@ -158,7 +158,7 @@ internal static class Program
         {
             if (reservedHotKey)
             {
-                UiDriver.ReleasePrimaryHotKey(target.Handle);
+                target.ReleasePrimaryHotKey();
             }
             if (app is not null)
             {

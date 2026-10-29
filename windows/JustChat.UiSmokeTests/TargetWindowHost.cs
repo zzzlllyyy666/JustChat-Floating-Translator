@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using WinFormsApplication = System.Windows.Forms.Application;
 
@@ -5,6 +6,12 @@ namespace JustChat.UiSmokeTests;
 
 internal sealed class TargetWindowHost : IDisposable
 {
+    private const int TestHotKeyId = 0x4A99;
+    private const uint ModControl = 0x0002;
+    private const uint ModShift = 0x0004;
+    private const uint ModNoRepeat = 0x4000;
+    private const uint VkSpace = 0x20;
+
     private readonly ManualResetEventSlim _ready = new();
     private readonly Thread _thread;
     private Form? _form;
@@ -84,6 +91,23 @@ internal sealed class TargetWindowHost : IDisposable
         }
     }
 
+    public void ReservePrimaryHotKey()
+    {
+        var form = RequiredForm();
+        var registered = (bool)form.Invoke(new Func<bool>(() =>
+            RegisterHotKey(form.Handle, TestHotKeyId, ModControl | ModShift | ModNoRepeat, VkSpace)));
+        if (!registered)
+        {
+            throw new InvalidOperationException($"Could not reserve the test hotkey: {Marshal.GetLastWin32Error()}.");
+        }
+    }
+
+    public void ReleasePrimaryHotKey()
+    {
+        var form = RequiredForm();
+        form.Invoke(new Action(() => UnregisterHotKey(form.Handle, TestHotKeyId)));
+    }
+
     private Form RequiredForm() => _form ?? throw new InvalidOperationException("Target form is unavailable.");
 
     private static TextBox CreateEditor(string name, string accessibleName) => new()
@@ -109,4 +133,12 @@ internal sealed class TargetWindowHost : IDisposable
         _thread.Join(TimeSpan.FromSeconds(10));
         _ready.Dispose();
     }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RegisterHotKey(nint hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnregisterHotKey(nint hWnd, int id);
 }
