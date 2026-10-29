@@ -37,9 +37,11 @@ JustChat 0.4.4 已在 **Apple Silicon（arm64）＋ macOS 26.6.2＋ Swift 6.3.3*
 
 ## Windows 版（开发预览）
 
-`windows/` 包含独立的 .NET 10＋WPF 工程，不依赖 Mac 版或常驻 Node 服务。当前提供置顶面板、六种目标语言、DeepSeek 基础翻译、30 秒超时、最多两次完整性尝试、错误提示、`Ctrl+Shift+Space` 全局呼出／收起、托盘常驻和文本写回。自定义行业与语气，以及 Mac 版的前缀锁定、分段和重复草稿优化尚未接入。
+`windows/` 包含独立的 .NET 10＋WPF 工程，不依赖 Mac 版或常驻 Node 服务。当前提供置顶面板、六种目标语言、DeepSeek 基础翻译、30 秒超时、最多两次完整性尝试、错误提示、`Ctrl+Shift+Space` 全局呼出／收起、托盘常驻、文本写回，以及自定义行业与语气。Mac 版的前缀锁定、分段和重复草稿优化尚未接入。
 
-填写自己的 DeepSeek API Key 后，点击“保存 Key”可使用 Windows DPAPI 按当前用户加密，并保存到 `%APPDATA%\JustChat\deepseek.key`。草稿只会在主动点击“翻译”时发送至 DeepSeek；翻译期间如果修改草稿或目标语言，旧请求的结果不会回填。
+填写自己的 DeepSeek API Key 后，点击“保存 Key”可使用 Windows DPAPI 按当前用户加密，并保存到 `%APPDATA%\JustChat\deepseek.key`。草稿和已保存的行业、语气只会在主动点击“翻译”时发送至 DeepSeek；翻译期间如果修改草稿、目标语言或翻译偏好，旧请求的结果不会回填。
+
+点击目标语言下方的翻译偏好摘要，可设置默认行业和语气。每项最多 160 个字符，留空则不设置；保存后每次翻译自动使用，也可清空恢复默认。偏好保存到 `%APPDATA%\JustChat\preferences.json`，不与 API Key 混存。
 
 译文生成后可直接编辑，再点击“写回”或按 `Ctrl+S`。JustChat 会激活最近使用的外部窗口并发送 `Ctrl+V`，不会读取目标输入框的已有内容。写回前会保存剪贴板，粘贴后仅在剪贴板未被用户改动时恢复原内容；写回成功后开始新草稿。目标窗口关闭、切换或粘贴失败时，草稿和译文会保留。
 

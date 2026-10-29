@@ -18,6 +18,21 @@ public sealed class TranslationPreferences
     public string Tone { get; }
     public bool IsEmpty => Industry.Length == 0 && Tone.Length == 0;
 
+    public string Summary
+    {
+        get
+        {
+            if (IsEmpty)
+            {
+                return "设置行业与语气 · 翻译会更像你";
+            }
+
+            var industry = Industry.Length == 0 ? "未设置行业" : Industry;
+            var tone = Tone.Length == 0 ? "未设置语气" : Tone;
+            return $"{industry} · {tone}";
+        }
+    }
+
     private static string Normalize(string? value)
     {
         var compacted = string.Join(

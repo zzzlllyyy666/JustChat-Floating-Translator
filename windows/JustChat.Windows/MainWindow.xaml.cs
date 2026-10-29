@@ -9,9 +9,11 @@ public partial class MainWindow : Window
 {
     private readonly TranslationClient _translationClient = new();
     private readonly DeepSeekCredentialStore _credentialStore = new();
+    private readonly TranslationPreferencesStore _preferencesStore = new();
     private GlobalHotKeyController? _globalHotKeyController;
     private ForegroundWindowTracker? _foregroundWindowTracker;
     private TextInserter? _textInserter;
+    private TranslationPreferences _translationPreferences = TranslationPreferences.Empty;
     private bool _isTranslating;
     private bool _isWritingBack;
     private bool _allowClose;
@@ -25,7 +27,9 @@ public partial class MainWindow : Window
         Closing += MainWindow_Closing;
         PreviewKeyDown += MainWindow_PreviewKeyDown;
         LoadSavedApiKey();
-        UpdateWriteBackState();
+        LoadSavedPreferences();
+        UpdatePreferencesSummary();
+        UpdateOperationState();
     }
 
     private void MainWindow_SourceInitialized(object? sender, EventArgs e)
@@ -49,7 +53,7 @@ public partial class MainWindow : Window
             SetStatus("Ctrl+Shift+Space 注册失败，可能被占用；请使用托盘图标打开", isError: true);
         }
 
-        UpdateWriteBackState();
+        UpdateOperationState();
     }
 
     public void TogglePanel()
@@ -120,6 +124,48 @@ public partial class MainWindow : Window
         }
     }
 
+    private void LoadSavedPreferences()
+    {
+        try
+        {
+            _translationPreferences = _preferencesStore.Load();
+        }
+        catch (InvalidDataException exception)
+        {
+            _translationPreferences = TranslationPreferences.Empty;
+            SetStatus(exception.Message, isError: true);
+        }
+    }
+
+    private void UpdatePreferencesSummary()
+    {
+        PreferencesButton.Content = _translationPreferences.Summary;
+        PreferencesButton.ToolTip = _translationPreferences.Summary;
+    }
+
+    private void PreferencesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isTranslating || _isWritingBack)
+        {
+            return;
+        }
+
+        var preferencesWindow = new PreferencesWindow(_translationPreferences)
+        {
+            Owner = this
+        };
+        if (preferencesWindow.ShowDialog() != true)
+        {
+            return;
+        }
+
+        _translationPreferences = preferencesWindow.Preferences;
+        UpdatePreferencesSummary();
+        SetStatus(_translationPreferences.IsEmpty
+            ? "已清除默认翻译要求"
+            : "已保存，以后翻译自动使用");
+    }
+
     private void SaveKeyButton_Click(object sender, RoutedEventArgs e)
     {
         var apiKey = ApiKeyPasswordBox.Password.Trim();
@@ -164,11 +210,12 @@ public partial class MainWindow : Window
 
         var targetLanguage = TargetLanguageSelector.SelectedItem as TranslationTargetLanguage
             ?? TranslationTargetLanguage.English;
+        var preferences = _translationPreferences;
         _isTranslating = true;
         TranslateButton.IsEnabled = false;
         TranslateButton.Content = "正在翻译…";
         TranslationTextBox.Clear();
-        UpdateWriteBackState();
+        UpdateOperationState();
         SetStatus("正在请求 DeepSeek，中文草稿已保留…");
 
         try
@@ -176,18 +223,22 @@ public partial class MainWindow : Window
             var translation = await _translationClient.TranslateAsync(
                 draft,
                 targetLanguage,
-                TranslationPreferences.Empty,
+                preferences,
                 apiKey);
 
             if (!string.Equals(draft, DraftTextBox.Text, StringComparison.Ordinal) ||
-                !ReferenceEquals(targetLanguage, TargetLanguageSelector.SelectedItem))
+                !ReferenceEquals(targetLanguage, TargetLanguageSelector.SelectedItem) ||
+                !string.Equals(preferences.Industry, _translationPreferences.Industry, StringComparison.Ordinal) ||
+                !string.Equals(preferences.Tone, _translationPreferences.Tone, StringComparison.Ordinal))
             {
-                SetStatus("草稿或目标语言已变化，本次译文未回填", isError: true);
+                SetStatus("草稿、目标语言或翻译偏好已变化，本次译文未回填", isError: true);
                 return;
             }
 
             TranslationTextBox.Text = translation;
-            SetStatus("翻译完成，译文可以编辑");
+            SetStatus(preferences.IsEmpty
+                ? "翻译完成，译文可以编辑"
+                : "已使用默认行业与语气，译文可以编辑");
         }
         catch (TranslationClientException exception)
         {
@@ -202,7 +253,7 @@ public partial class MainWindow : Window
             _isTranslating = false;
             TranslateButton.Content = "翻译";
             TranslateButton.IsEnabled = true;
-            UpdateWriteBackState();
+            UpdateOperationState();
         }
     }
 
@@ -249,7 +300,7 @@ public partial class MainWindow : Window
         TranslateButton.IsEnabled = false;
         DraftTextBox.IsReadOnly = true;
         TranslationTextBox.IsReadOnly = true;
-        UpdateWriteBackState();
+        UpdateOperationState();
         SetStatus("正在写回最近使用的输入框…");
 
         try
@@ -282,7 +333,7 @@ public partial class MainWindow : Window
             DraftTextBox.IsReadOnly = false;
             TranslationTextBox.IsReadOnly = false;
             TranslateButton.IsEnabled = true;
-            UpdateWriteBackState();
+            UpdateOperationState();
         }
     }
 
@@ -290,6 +341,12 @@ public partial class MainWindow : Window
         object sender,
         System.Windows.Controls.TextChangedEventArgs e)
     {
+        UpdateWriteBackState();
+    }
+
+    private void UpdateOperationState()
+    {
+        PreferencesButton.IsEnabled = !_isTranslating && !_isWritingBack;
         UpdateWriteBackState();
     }
 
