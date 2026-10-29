@@ -157,6 +157,7 @@ internal static class Program
             UseShellExecute = false
         };
         startInfo.Environment["APPDATA"] = appDataDirectory;
+        startInfo.Environment["JUSTCHAT_CONFIG_DIRECTORY"] = Path.Combine(appDataDirectory, "JustChat");
         startInfo.Environment["JUSTCHAT_TRANSLATION_ENDPOINT"] = endpoint.AbsoluteUri;
         return Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start JustChat.");
     }

@@ -11,8 +11,7 @@ public sealed class DeepSeekCredentialStore
     public DeepSeekCredentialStore()
     {
         _credentialPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JustChat",
+            AppStorage.DirectoryPath,
             "deepseek.key");
     }
 

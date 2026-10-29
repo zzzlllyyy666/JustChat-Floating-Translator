@@ -11,8 +11,7 @@ internal sealed class TranslationPreferencesStore
     public TranslationPreferencesStore()
     {
         _preferencesPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JustChat",
+            AppStorage.DirectoryPath,
             "preferences.json");
     }
 
