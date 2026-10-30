@@ -8,7 +8,5 @@
 *.p12
 *.p8
 *.mobileprovision
-windows/**/bin/
-windows/**/obj/
 /artifacts/
 /deliverables/
