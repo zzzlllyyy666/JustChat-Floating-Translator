@@ -4,8 +4,6 @@ English | [中文](README.zh-CN.md)
 
 JustChat is an open-source floating writing panel for macOS: write Chinese in a separate window, preview and edit the translation, then write the text back to the original cursor position. It is not an input method and does not read or modify the existing contents of the target input field.
 
-Swift communicates directly with DeepSeek for translation. **No Node.js, npm, Homebrew, resident local service, or additional client is required, and no paid Apple Developer Program membership is needed.**
-
 ## Features
 
 - Summon or hide the panel globally with `⌘⇧ Space`.
@@ -22,47 +20,6 @@ Swift communicates directly with DeepSeek for translation. **No Node.js, npm, Ho
 - macOS 14 or later.
 - A Swift 6 toolchain, available from Xcode or the corresponding Command Line Tools.
 - Your own DeepSeek API Key, plus network access to DeepSeek and an account with available balance.
-
-### Verified environment and compatibility boundaries
-
-JustChat 0.4.4 has passed real-world usage, permission, and UI verification on **Apple Silicon (arm64) + macOS 26.6.2 + Swift 6.3.3**. macOS 14 is the minimum deployment target; this does not mean every Mac running macOS 14 or later has been tested.
-
-| Item | Verification and boundaries |
-| --- | --- |
-| Chip architecture | Apple Silicon (arm64) is verified. Copying the current app directly will not work on Intel Macs. The build script supports `x86_64` and `universal`, but Intel hardware has not been verified. |
-| macOS version | macOS 26.6.2 is verified. Other versions running macOS 14 or later have not each been tested. |
-| Mac model year | There are no restrictions for specific model years or GPUs. Compatibility primarily depends on the chip, system version, and Swift toolchain. |
-| Light and dark appearance | Both have been checked. Primary buttons follow the system accent color, so their color may differ between users. |
-| Accessibility display settings | Increase Contrast, Reduce Transparency, and larger text have not been specifically tested. The panel is fixed at 340 × 360 and may become crowded with very large text. |
-
-Installation, system authorization, and text write-back may behave differently in environments that have not been tested. When reporting a compatibility issue, include your Mac chip, macOS version, JustChat version, and specific reproduction steps.
-
-## Windows version (in testing, not yet released)
-
-Current GitHub Releases include only the Mac version. Windows source code remains in the repository for development and validation. Formal installers and real-device compatibility notes will be added after validation is complete.
-
-`windows/` contains an independent .NET 10 + WPF project that does not depend on the Mac version or a resident Node service. It currently provides an always-on-top panel, six target languages, DeepSeek translation, a 30-second timeout, up to two integrity attempts, error messages, a three-step first-run guide, light and dark themes, global show/hide with `Ctrl+Shift+Space`, tray presence, text write-back, custom industry and tone preferences, prefix locking, multiline segmentation, and repeated-draft optimization.
-
-Multiline drafts are assigned line-based IDs and use a segmented JSON protocol that preserves indentation and CRLF line endings. Missing segments, duplicate IDs, empty translations, residual Chinese, or changed line-break counts trigger an integrity retry. Existing English is locked only at explicit boundaries; product identifiers such as `A1` and `SKU-42` are not incorrectly split. Identical Chinese draft segments are translated only once and then restored using their original separators.
-
-After entering your own DeepSeek API Key, click "Save Key" to encrypt it with Windows DPAPI for the current user and save it to `%APPDATA%\JustChat\deepseek.key`. Drafts and saved industry or tone preferences are sent to DeepSeek only when you explicitly click "Translate." If you change the draft, target language, or translation preferences while a request is in progress, the stale result will not be applied.
-
-Click the translation preference summary below the target language to set a default industry and tone. Each field accepts up to 160 characters; leave a field empty to omit that preference. Saved preferences are automatically used for subsequent translations and can be cleared to restore the default. They are stored separately from the API Key in `%APPDATA%\JustChat\preferences.json`.
-
-Once a translation is generated, edit it if needed, then click "Write Back" or press `Ctrl+S`. JustChat activates the most recently used external window and sends `Ctrl+V`; it does not read the existing contents of the target input field. JustChat saves the clipboard before write-back and restores it after pasting only if the user has not changed it. A new draft starts after successful write-back. If the target window closes, changes, or the paste fails, both the draft and translation are preserved.
-
-Text write-back requires the target application to support clipboard paste. Windows may block write-back if the target application runs with higher privileges, is on a secure desktop, or blocks simulated keystrokes. In that case, copy the translation from the panel and paste it manually.
-
-Closing the main window only hides it to the tray and does not quit the app. Double-click the tray icon or choose "Open JustChat" to show the panel again; choose "Quit JustChat" to exit completely. If `Ctrl+Shift+Space` is already occupied by another program, JustChat automatically uses `Ctrl+Alt+Space`. After the original shortcut becomes available, click "Restore primary shortcut" in the panel to switch back without restarting.
-
-On a Windows computer with the .NET 10 SDK installed, run the core tests and build the x64 single-file app from the repository root:
-
-```powershell
-dotnet test windows/JustChat.Core.Tests/JustChat.Core.Tests.csproj --configuration Release
-dotnet publish windows/JustChat.Windows/JustChat.Windows.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-```
-
-Replace `win-x64` with `win-arm64` to build the ARM64 version. `.github/workflows/windows.yml` runs the core tests on Windows and builds self-contained artifacts for both architectures. Windows build artifacts and real-device compatibility are subject to actual CI and acceptance results.
 
 ## Install on your Mac
 

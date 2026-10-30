@@ -4,8 +4,6 @@
 
 JustChat 是一个开源的 macOS 浮动写作面板：在独立窗口里写中文，预览并修改译文，再把文本写回原来的光标位置。它不是输入法，也不会读取或修改目标输入框中的已有内容。
 
-翻译由 Swift 直接请求 DeepSeek 完成。**不需要 Node.js、npm、Homebrew、常驻本地服务或其他客户端，也不需要付费 Apple Developer Program。**
-
 ## 功能
 
 - `⌘⇧ Space` 全局呼出或收起面板。
@@ -22,47 +20,6 @@ JustChat 是一个开源的 macOS 浮动写作面板：在独立窗口里写中�
 - macOS 14 或更新版本。
 - Swift 6 工具链，可从 Xcode 或对应的命令行开发工具获得。
 - 用户自己的 DeepSeek API Key，以及可访问 DeepSeek 的网络和账户余额。
-
-### 已验证环境与兼容边界
-
-JustChat 0.4.4 已在 **Apple Silicon（arm64）＋ macOS 26.6.2＋ Swift 6.3.3** 环境通过实际使用、权限和界面验证。macOS 14 是最低部署目标，不代表所有 macOS 14 或更新版本都已完成真机测试。
-
-| 项目 | 已验证情况与边界 |
-| --- | --- |
-| 芯片架构 | Apple Silicon（arm64）已验证。直接复制当前 App 不适用于 Intel Mac；构建脚本支持 `x86_64` 和 `universal`，但 Intel 真机尚未验证。 |
-| macOS 版本 | macOS 26.6.2 已验证；其他 macOS 14 或更新版本尚未逐一实测。 |
-| Mac 年份 | 没有针对特定年份或显卡的限制，主要取决于芯片、系统版本和 Swift 工具链。 |
-| 浅色与深色外观 | 均已检查；主按钮会跟随系统强调色，不同用户的按钮颜色可能不同。 |
-| 辅助显示设置 | 高对比度、降低透明度和放大文字尚未专项测试。面板固定为 340 × 360，极大字体下可能出现拥挤。 |
-
-在未实测环境中，安装、系统授权和文本写回行为可能存在差异。反馈兼容性问题时，请提供 Mac 芯片、macOS 版本、JustChat 版本和具体复现步骤。
-
-## Windows 版（测试中，暂未发布）
-
-当前 GitHub Release 仅包含 Mac 版。Windows 源码保留在仓库中供开发验证，正式安装包和真机兼容性说明将在完成验证后补充。
-
-`windows/` 包含独立的 .NET 10＋WPF 工程，不依赖 Mac 版或常驻 Node 服务。当前提供置顶面板、六种目标语言、DeepSeek 翻译、30 秒超时、最多两次完整性尝试、错误提示、首次使用三步指南、浅色与深色主题、`Ctrl+Shift+Space` 全局呼出／收起、托盘常驻、文本写回、自定义行业与语气、前缀锁定、多行分段和重复草稿优化。
-
-多行草稿会按行建立 ID，使用分段 JSON 协议并保留缩进与 CRLF 换行；缺段、重复 ID、空译文、残留中文或换行数量变化会触发完整性重试。已有英文只有在明确边界处才会锁定，`A1`、`SKU-42` 等产品标识不会被误拆。完全相同的两段中文草稿只请求一次翻译，再按原分隔符还原。
-
-填写自己的 DeepSeek API Key 后，点击“保存 Key”可使用 Windows DPAPI 按当前用户加密，并保存到 `%APPDATA%\JustChat\deepseek.key`。草稿和已保存的行业、语气只会在主动点击“翻译”时发送至 DeepSeek；翻译期间如果修改草稿、目标语言或翻译偏好，旧请求的结果不会回填。
-
-点击目标语言下方的翻译偏好摘要，可设置默认行业和语气。每项最多 160 个字符，留空则不设置；保存后每次翻译自动使用，也可清空恢复默认。偏好保存到 `%APPDATA%\JustChat\preferences.json`，不与 API Key 混存。
-
-译文生成后可直接编辑，再点击“写回”或按 `Ctrl+S`。JustChat 会激活最近使用的外部窗口并发送 `Ctrl+V`，不会读取目标输入框的已有内容。写回前会保存剪贴板，粘贴后仅在剪贴板未被用户改动时恢复原内容；写回成功后开始新草稿。目标窗口关闭、切换或粘贴失败时，草稿和译文会保留。
-
-文本写回依赖目标应用支持剪贴板粘贴。目标应用以更高权限运行、处于安全桌面，或拦截模拟按键时，Windows 可能阻止写回；此时可在面板中复制译文后手动粘贴。
-
-关闭主窗口只会隐藏到托盘，不会退出应用。双击托盘图标或选择“打开 JustChat”可重新显示面板，选择“退出 JustChat”才会彻底退出。如果 `Ctrl+Shift+Space` 已被其他程序占用，会自动改用 `Ctrl+Alt+Space`；原快捷键释放后，可点击面板中的“恢复首选快捷键”切换回来，无需重启。
-
-在安装了 .NET 10 SDK 的 Windows 电脑上，可从仓库根目录运行核心测试并构建 x64 单文件应用：
-
-```powershell
-dotnet test windows/JustChat.Core.Tests/JustChat.Core.Tests.csproj --configuration Release
-dotnet publish windows/JustChat.Windows/JustChat.Windows.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-```
-
-将 `win-x64` 改为 `win-arm64` 可构建 ARM64 版本。`.github/workflows/windows.yml` 会在 Windows 上运行核心测试，并分别构建两种架构的自包含产物。Windows 编译产物和真机兼容性以实际 CI 与验收结果为准。
 
 ## 安装到自己的 Mac
 
