@@ -35,7 +35,9 @@ JustChat 0.4.4 已在 **Apple Silicon（arm64）＋ macOS 26.6.2＋ Swift 6.3.3*
 
 在未实测环境中，安装、系统授权和文本写回行为可能存在差异。反馈兼容性问题时，请提供 Mac 芯片、macOS 版本、JustChat 版本和具体复现步骤。
 
-## Windows 版
+## Windows 版（测试中，暂未发布）
+
+当前 GitHub Release 仅包含 Mac 版。Windows 源码保留在仓库中供开发验证，正式安装包和真机兼容性说明将在完成验证后补充。
 
 `windows/` 包含独立的 .NET 10＋WPF 工程，不依赖 Mac 版或常驻 Node 服务。当前提供置顶面板、六种目标语言、DeepSeek 翻译、30 秒超时、最多两次完整性尝试、错误提示、首次使用三步指南、浅色与深色主题、`Ctrl+Shift+Space` 全局呼出／收起、托盘常驻、文本写回、自定义行业与语气、前缀锁定、多行分段和重复草稿优化。
 
