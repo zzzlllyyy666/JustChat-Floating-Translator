@@ -26,6 +26,7 @@ fi
 SOURCE_ENTRIES=(
     "$PROJECT_DIR/Package.swift"
     "$PROJECT_DIR/README.md"
+    "$PROJECT_DIR/README.zh-CN.md"
     "$PROJECT_DIR/LICENSE"
     "$PROJECT_DIR/Scripts"
     "$PROJECT_DIR/Sources"
