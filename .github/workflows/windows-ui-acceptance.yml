@@ -32,7 +32,7 @@ jobs:
       - name: Publish application and UI test driver
         shell: pwsh
         run: |
-          dotnet publish windows/JustChat.Windows/JustChat.Windows.csproj --configuration Release --output artifacts/ui/app --nologo
+          dotnet publish windows/JustChat.Windows/JustChat.Windows.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/ui/app -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false --nologo
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet publish windows/JustChat.UiSmokeTests/JustChat.UiSmokeTests.csproj --configuration Release --output artifacts/ui/runner --nologo
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
